@@ -1,0 +1,144 @@
+version: "3.8"
+services:
+
+    # PHP Service
+    php:
+        build:
+            context: .
+            target: php
+            args:
+                - APP_ENV=${APP_ENV}
+        environment:
+            - APP_ENV=${APP_ENV}
+            - CONTAINER_ROLE=app
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        ports:
+            - 8000:8000
+        depends_on:
+            - database
+            - redis
+          
+
+    # PHP Service
+    websocket:
+        build:
+            context: .
+            target: php
+            args:
+                - APP_ENV=${APP_ENV}
+        environment:
+            - APP_ENV=${APP_ENV}
+            - CONTAINER_ROLE=websocket
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        ports:
+            - 6001:6001
+        depends_on:
+            - database
+            - redis
+
+    # Database Server
+    database:
+        image: mysql:8.0
+        ports:
+            -   3306:3306
+        environment:
+            - MYSQL_DATABASE=${DB_DATABASE}
+            - MYSQL_USER=${DB_USERNAME}
+            - MYSQL_PASSWORD=${DB_PASSWORD}
+            - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+        volumes:
+            - db-data:/var/lib/mysql
+    # phpMyAdmin Service
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        environment:
+          - PMA_ARBITRARY=1
+          - PMA_HOST=database
+          - PMA_USER=${DB_USERNAME}
+          - PMA_PASSWORD=${DB_PASSWORD}
+        ports:
+          - 8080:80
+        depends_on:
+          - database
+
+
+    # Redis Server
+    redis:
+        image: redis:alpine
+        command: redis-server --appendonly yes --requirepass  "${REDIS_PASSWORD}"
+        ports:
+            - 6379:6379
+
+    # Queue Server
+    queue:
+        build:
+            context: .
+            target: php
+            args:
+                - APP_ENV=${APP_ENV}
+        environment:
+            - APP_ENV=${APP_ENV}
+            - CONTAINER_ROLE=queue
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+
+    # Node Server
+    node:
+        build:
+            context: .
+            target: node
+        volumes:
+            - .:/usr/src
+            - ./node_modules:/usr/src/node_modules
+        tty: true
+
+volumes:
+    db-data: ~
+
+
+# version: '3'
+
+# services:
+#   db:
+#     image: mysql:8.0
+#     environment:
+#       - MYSQL_DATABASE=news-aggregator-db
+#       - MYSQL_USER=root
+#       - MYSQL_ROOT_PASSWORD=abc123
+#       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+#     ports:
+#       - 3306:3306
+#     volumes:
+#       - mysql_data:/var/lib/mysql
+#     command: ["--default-authentication-plugin=mysql_native_password"]
+  
+#   phpmyadmin:
+#     image: phpmyadmin/phpmyadmin
+#     environment:
+#       - PMA_HOST=db
+#       - PMA_USER=root
+#       - PMA_PASSWORD=abc123
+#     ports:
+#       - 8080:80
+#     depends_on:
+#       - db
+
+#   app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     ports:
+#       - 8002:8002
+#     volumes:
+#       - .:/var/www/html
+#     depends_on:
+#       - db
+#     # command: ["bash", "-c", "php artisan migrate --path=/database/migrations/2014_10_12_000000_create_users_table.php --path=/database/migrations/2014_10_12_100000_create_password_reset_tokens_table.php --path=/database/migrations/2014_10_12_100000_create_password_resets_table.php --path=/database/migrations/2019_08_19_000000_create_failed_jobs_table.php --path=/database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php --path=/database/migrations/2023_05_20_104826_create_user_preferences_table.php --path=/database/migrations/2023_05_20_105155_create_saved_articles_table.php"]
+
+# volumes:
+#   mysql_data:
