@@ -12,7 +12,9 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SavedArticle::query();
+        $user_id = $request->input('user_id');
+
+        $query = SavedArticle::query()->where('user_id', $user_id);
 
         // Filter by category
         if ($request->has('category')) {
