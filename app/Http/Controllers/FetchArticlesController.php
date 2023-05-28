@@ -135,12 +135,13 @@ class FetchArticlesController extends Controller
             if (isset($article['multimedia'][0]['url'])) {
                 $thumbnail = 'https://www.nytimes.com/' . $article['multimedia'][0]['url'];
             }
+            $category = isset($article['section_name']) ? $article['section_name'] : "";
             SavedArticle::create([
                 'user_id' => $userId,
                 'title' => $article['headline']['main'],
                 'description' => $article['abstract'],
                 'source' => $article['source'],
-                'category' => $article['section_name'],
+                'category' => $category,
                 'author' => $article['byline']['original'] ?? "",
                 'published_at' => $publishedAt,
                 'url' => $article['web_url'],
