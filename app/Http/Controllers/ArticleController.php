@@ -3,32 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Models\SavedArticle;
+use App\Models\User;
+use App\Models\UserPreference;
 use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index(Request $request)
     {
         $user_id = $request->input('user_id');
-
         $query = SavedArticle::query()->where('user_id', $user_id);
 
         // Filter by category
         if ($request->has('category')) {
-            $query->where('category', $request->category);
+            $category = $request->input('category');
+            $query->whereIn('category', $category);
         }
 
         // Filter by source
         if ($request->has('source')) {
-            $query->where('source', $request->source);
+            $source = $request->input('source');
+            $query->whereIn('source', $source);
         }
 
-        // Filter by author
-        if ($request->has('author')) {
-            $query->where('author', $request->author);
+        // Filter by authors
+        if ($request->has('authors')) {
+            $authors = $request->input('authors');
+            $query->whereIn('author', $authors);
         }
 
         // Filter by published_at
@@ -46,40 +48,73 @@ class ArticleController extends Controller
             });
         }
 
+        // Apply user preferences filtering
+        $user = User::findOrFail($user_id);
+        $preferences = $user->preferences ?? new UserPreference();
+
+        if ($preferences->preferred_sources) {
+            $sources = explode(',', $preferences->preferred_sources);
+            $query->whereIn('source', $sources);
+        }
+
+        if ($preferences->preferred_categories) {
+            $categories = explode(',', $preferences->preferred_categories);
+            $query->whereIn('category', $categories);
+        }
+
+        if ($preferences->preferred_authors) {
+            $authors = explode(',', $preferences->preferred_authors);
+            $query->whereIn('author', $authors);
+        }
+
         $articles = $query->get();
 
         return response()->json($articles);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function updatePreferences(Request $request)
     {
-        //
+        $user_id = $request->input('user_id');
+        $user = User::findOrFail($user_id);
+        $preferences = $user->preferences ?? new UserPreference();
+        $preferences->user_id = $user_id;
+        $preferences->preferred_sources = $request->input('preferred_sources', []);
+        $preferences->preferred_categories = $request->input('preferred_categories', []);
+        $preferences->preferred_authors = $request->input('preferred_authors', []);
+        $preferences->save();
+
+        return response()->json(['message' => 'User preferences updated successfully']);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function getOptions()
     {
-        //
-    }
+        $authors = SavedArticle::distinct('author')->pluck('author');
+        $sources = SavedArticle::distinct('source')->pluck('source');
+        $categories = SavedArticle::distinct('category')->pluck('category');
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
+        return response()->json([
+            'authors' => $authors,
+            'sources' => $sources,
+            'categories' => $categories,
+        ]);
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function getUserPreferences($user_id)
     {
-        //
+        $preferences = UserPreference::where('user_id', $user_id)->first();
+
+        if ($preferences) {
+            return response()->json([
+                'preferred_authors' => $preferences->preferred_authors,
+                'preferred_sources' => $preferences->preferred_sources,
+                'preferred_categories' => $preferences->preferred_categories,
+            ]);
+        }
+
+        // If no preferences found, return empty values
+        return response()->json([
+            'preferred_authors' => null,
+            'preferred_sources' => null,
+            'preferred_categories' => null,
+        ]);
     }
 }

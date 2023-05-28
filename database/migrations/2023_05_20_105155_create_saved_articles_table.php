@@ -20,8 +20,8 @@ return new class extends Migration {
             $table->string('author');
             $table->timestamp('published_at');
             $table->string('url', 255);
+            $table->string('thumbnail', 512)->nullable();
             $table->timestamps();
-
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }

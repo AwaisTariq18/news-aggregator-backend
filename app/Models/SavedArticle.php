@@ -10,6 +10,10 @@ class SavedArticle extends Model
     use HasFactory;
 
     protected $table = 'saved_articles';
+    // protected $attributes = [
+    //     'thumbnail' => 'default-thumbnail.jpg',
+    // ];
+
 
     protected $fillable = [
         'user_id',
@@ -19,6 +23,10 @@ class SavedArticle extends Model
         'category',
         'author',
         'published_at',
+        'thumbnail',
         'url',
+        'preferred_sources',
+        'preferred_categories',
+        'preferred_authors',
     ];
 }

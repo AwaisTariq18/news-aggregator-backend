@@ -11,16 +11,12 @@ class FetchArticlesController extends Controller
 {
     public function fetchArticles(Request $request, $userId)
     {
-        // Fetch articles from NewsAPI
         $newsApiArticles = $this->fetchArticlesFromNewsApi();
 
-        // Fetch articles from The Guardian
         $guardianArticles = $this->fetchArticlesFromGuardian();
 
-        // Fetch articles from New York Times
         $nytArticles = $this->fetchArticlesFromNewYorkTimes();
 
-        // Store the articles in the database
         $this->storeNewsArticles($newsApiArticles, $userId);
         $this->storeGuardianArticles($guardianArticles, $userId);
         $this->storeNewYorkArticles($nytArticles, $userId);
@@ -39,7 +35,6 @@ class FetchArticlesController extends Controller
                 'q' => '*',
                 'language' => 'en',
                 'order-by' => 'newest',
-                // Add any additional query parameters as needed
             ]
         ]);
 
@@ -48,7 +43,6 @@ class FetchArticlesController extends Controller
 
     protected function fetchArticlesFromGuardian()
     {
-        // Fetch articles from The Guardian using Guzzle
         $apiKey = env('GUARDIAN_API_KEY');
         $url = env('GUARDIAN_API_URL');
 
@@ -58,7 +52,7 @@ class FetchArticlesController extends Controller
                 'api-key' => $apiKey,
                 'order-by' => 'newest',
                 'page-size' => 100,
-                // Add any additional query parameters as needed
+                'show-fields' => 'all'
             ]
         ]);
 
@@ -87,28 +81,28 @@ class FetchArticlesController extends Controller
             $articles = array_merge($articles, $pageArticles);
 
             if (count($articles) >= 100) {
-                // Stop fetching articles once we have 100 or more
+
                 break;
             }
         }
 
-        return array_slice($articles, 0, 100); // Return the first 100 articles
+        return array_slice($articles, 0, 100);
     }
 
     protected function storeNewsArticles($articles, $userId)
     {
         foreach ($articles as $article) {
-            // Store the article in the database
+            $publishedAt = Carbon::parse($article['publishedAt'])->toDateTimeString();
             SavedArticle::create([
                 'user_id' => $userId,
-                // TODO: Change this to the user id of the user who is currently logged in
                 'title' => $article['title'],
                 'description' => $article['description'],
                 'source' => $article['source']['name'],
-                'category' => $article['category'] ?? "",
+                'category' => 'general',
                 'author' => $article['author'] ?? "",
-                'published_at' => now(),
-                'url' => $article['url']
+                'published_at' => $publishedAt,
+                'url' => $article['url'],
+                'thumbnail' => $article['urlToImage'] ?? null,
             ]);
         }
     }
@@ -116,24 +110,31 @@ class FetchArticlesController extends Controller
     protected function storeGuardianArticles($articles, $userId)
     {
         foreach ($articles as $article) {
-            // Store the article in the database
+            $publishedAt = Carbon::parse($article['webPublicationDate'])->toDateTimeString();
+            $author = isset($article['fields']['byline']) ? $article['fields']['byline'] : "";
             SavedArticle::create([
                 'user_id' => $userId,
                 'title' => $article['webTitle'],
                 'description' => $article['blocks']['body'][0]['bodyTextSummary'] ?? "",
-                'source' => $article['sectionName'],
+                'source' => 'The Guardian',
                 'category' => $article['sectionName'],
-                'author' => $article['webTitle'],
-                'published_at' => now(),
-                'url' => $article['webUrl']
+                'author' => $author,
+                'published_at' => $publishedAt,
+                'url' => $article['webUrl'],
+                'thumbnail' => $article['fields']['thumbnail'] ?? null
             ]);
         }
     }
 
     protected function storeNewYorkArticles($articles, $userId)
     {
+
         foreach ($articles as $article) {
-            // Store the article in the database
+            $publishedAt = Carbon::parse($article['pub_date'])->toDateTimeString();
+            $thumbnail = null;
+            if (isset($article['multimedia'][0]['url'])) {
+                $thumbnail = 'https://www.nytimes.com/' . $article['multimedia'][0]['url'];
+            }
             SavedArticle::create([
                 'user_id' => $userId,
                 'title' => $article['headline']['main'],
@@ -141,8 +142,9 @@ class FetchArticlesController extends Controller
                 'source' => $article['source'],
                 'category' => $article['section_name'],
                 'author' => $article['byline']['original'] ?? "",
-                'published_at' => now(),
-                'url' => $article['web_url']
+                'published_at' => $publishedAt,
+                'url' => $article['web_url'],
+                'thumbnail' => $thumbnail
             ]);
         }
     }

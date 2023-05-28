@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserPreferenceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,3 +32,13 @@ Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api')
 
 // Route::get('/articles', 'ArticleController@index');
 Route::get('/articles', [ArticleController::class, 'index']);
+
+// Route for Options
+Route::get('/articles/options', [ArticleController::class, 'getOptions']);
+
+
+//Route for user_prefrences
+Route::post('/update-preferences', [ArticleController::class, 'updatePreferences']);
+
+// Route to fetch user prefrences
+Route::get('/user-preferences/{user_id}', [ArticleController::class, 'getUserPreferences']);

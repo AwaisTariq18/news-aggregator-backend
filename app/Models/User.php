@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\SavedArticle;
+use App\Models\UserPreference;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -46,5 +47,9 @@ class User extends Authenticatable implements MustVerifyEmail
     public function savedArticles()
     {
         return $this->hasMany(SavedArticle::class);
+    }
+    public function preferences()
+    {
+        return $this->hasOne(UserPreference::class);
     }
 }
